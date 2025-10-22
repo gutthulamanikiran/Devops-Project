@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+        <h2>Welcome to TicketBooker</h2>
+        <p>Your one-stop solution for booking tickets to amazing events!</p>
+        <a href="{{ url_for('main.events_list') }}" class="btn">Browse Events</a>
+    </div>
+</div>
+
+<div class="features">
+    <div class="feature">
+        <h3>🎵 Concerts</h3>
+        <p>Book tickets for your favorite artists</p>
+    </div>
+    <div class="feature">
+        <h3>🎭 Theater</h3>
+        <p>Enjoy amazing theatrical performances</p>
+    </div>
+    <div class="feature">
+        <h3>🎤 Conferences</h3>
+        <p>Learn from industry experts</p>
+    </div>
+</div>
+{% endblock %}
