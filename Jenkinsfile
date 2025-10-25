@@ -93,7 +93,16 @@ pipeline {
             }
         }
     }
-
     post {
         success {
             echo "✅ SUCCESS: Build ${env.BUILD_NUMBER} completed."
+        }
+        failure {
+            echo "❌ FAILED: Build ${env.BUILD_NUMBER}."
+        }
+        always {
+            echo "🧹 Cleaning up Docker images..."
+            bat "docker image prune -f"
+        }
+    }
+}
