@@ -1,0 +1,72 @@
+# Git
+.git/
+.gitignore
+README.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables (except those needed for build)
+.env
+
+# Development files
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.prod.yml
+
+# CI/CD configuration
+.jenkins/
+Jenkinsfile
+
+# Kubernetes manifests (if you want to separate build from deploy)
+k8s/
+
+# Test files
+tests/
+test/
+*test*.py
+*_test.py
+
+# Documentation
+docs/
+*.md
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Local development
+.devcontainer/

@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKERHUB_CREDENTIALS = credentials('Docker')
-        IMAGE_NAME = 'your-dockerhub-username/ticket-booking-app'
+        IMAGE_NAME = 'manikirangutthula2004/ticket-booking-app'
         KUBECONFIG = credentials('kubeconfig')
     }
     
