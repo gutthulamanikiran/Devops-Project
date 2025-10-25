@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: ticket-booking-app
-        image: your-dockerhub-username/ticket-booking-app:latest
+        image: manikirangutthula2004/ticket-booking-app
         ports:
         - containerPort: 5000
         env:
