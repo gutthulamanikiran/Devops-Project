@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('Docker')
+        DOCKERHUB_CREDENTIALS = credentials('DockerHubCredentials')
         IMAGE_NAME = 'manikirangutthula2004/ticket-booking-app'
         KUBECONFIG = credentials('kubeconfig')
     }
