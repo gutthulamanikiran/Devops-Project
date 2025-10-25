@@ -14,11 +14,22 @@ pipeline {
             }
         }
 
+        stage('Precheck') {
+            steps {
+                bat '''
+                echo Checking Docker status...
+                docker version || (echo Docker is not running! && exit /b 1)
+                '''
+            }
+        }
+
         stage('Test') {
             steps {
-                bat 'echo Running tests...'
-                // Add your actual test commands here
-                bat 'python -m pytest tests/ || exit 0'
+                bat '''
+                echo Running tests...
+                pip install pytest
+                python -m pytest tests/ || exit 0
+                '''
             }
         }
 
