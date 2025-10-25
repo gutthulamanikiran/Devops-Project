@@ -1,27 +1,27 @@
 pipeline {
     agent any
-    
+
     environment {
         DOCKERHUB_CREDENTIALS = credentials('DockerHubCredentials')
         IMAGE_NAME = 'manikirangutthula2004/ticket-booking-app'
         KUBECONFIG = credentials('kubeconfig')
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
-        
+
         stage('Test') {
             steps {
-                sh 'echo "Running tests..."'
+                bat 'echo Running tests...'
                 // Add your actual test commands here
-                sh 'python -m pytest tests/ || true'
+                bat 'python -m pytest tests/ || exit 0'
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 script {
@@ -29,19 +29,19 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Test Docker Image') {
             steps {
-                sh """
+                bat """
                 docker run -d --name test-app ${IMAGE_NAME}:${env.BUILD_ID}
-                sleep 10
-                curl -f http://localhost:5000 || exit 1
+                timeout /t 10 >nul
+                curl -f http://localhost:5000 || exit /b 1
                 docker stop test-app
                 docker rm test-app
                 """
             }
         }
-        
+
         stage('Push to Docker Hub') {
             steps {
                 script {
@@ -52,20 +52,20 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy to Kubernetes') {
             steps {
-                sh """
+                bat """
                 kubectl apply -f k8s/
                 kubectl rollout status deployment/ticket-booking-app
                 """
             }
         }
     }
-    
+
     post {
         always {
-            sh 'docker system prune -f'
+            bat 'docker system prune -f'
             cleanWs()
         }
         success {
