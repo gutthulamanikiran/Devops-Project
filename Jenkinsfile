@@ -2,86 +2,98 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('DockerHubCredentials')
-        IMAGE_NAME = 'manikirangutthula2004/ticket-booking-app'
-        KUBECONFIG = credentials('kubeconfig')
+        DOCKER_IMAGE = "manikirangutthula2004/ticket-booking-app"
+        K8S_NAMESPACE = "default"
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
     }
 
     stages {
         stage('Checkout') {
             steps {
+                echo "🔄 Checking out source code..."
                 checkout scm
             }
         }
 
-        stage('Precheck') {
+        stage('Build Docker') {
             steps {
-                bat '''
-                echo Checking Docker status...
-                docker version || (echo Docker is not running! && exit /b 1)
-                '''
+                withCredentials([usernamePassword(credentialsId: 'DockerHubCredentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat """
+                    echo Logging into Docker Hub...
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+
+                    echo Building Docker image...
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                    """
+                }
             }
         }
 
-
-        stage('Build Docker Image') {
+        stage('Test Application') {
             steps {
                 script {
-                    docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
+                    echo "⚡ Testing Docker container..."
+
+                    // Remove old container safely
+                    bat "docker rm -f test-app || echo No existing container"
+
+                    // Run container
+                    bat "docker run -d --name test-app -p 5000:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
+
+                    // Wait for app startup
+                    bat 'ping 127.0.0.1 -n 10 >nul'
+
+                    // Health checks (fail build if not reachable)
+                    def health1 = bat(script: 'powershell -Command "curl http://localhost:5000/health -UseBasicParsing"', returnStatus: true)
+                    def health2 = bat(script: 'powershell -Command "curl http://localhost:5000/ -UseBasicParsing"', returnStatus: true)
+                    if (health1 != 0 || health2 != 0) {
+                        error("❌ Health check failed!")
+                    }
+
+                    // Stop and remove container
+                    bat "docker stop test-app && docker rm test-app"
                 }
             }
         }
-
-        stage('Test Docker Image') {
-            steps {
-                bat '''
-                    REM Remove any previous test container
-                    docker rm -f test-app || echo No existing container
-        
-                    REM Run container with port mapping
-                    docker run -d -p 5000:5000 --name test-app manikirangutthula2004/ticket-booking-app:7
-                    
-                    REM Wait for the container to start
-                    timeout /t 20
-            
-                    REM Test if the app is responding
-                    curl -f http://localhost:5000
-                    '''
-                }
-            }
-
 
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'DockerHubCredentials') {
-                        docker.image("${IMAGE_NAME}:${env.BUILD_ID}").push()
-                        docker.image("${IMAGE_NAME}:latest").push()
-                    }
+                withCredentials([usernamePassword(credentialsId: 'DockerHubCredentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat """
+                    echo Pushing Docker images...
+                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker push ${DOCKER_IMAGE}:latest
+                    """
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                bat """
-                kubectl apply -f k8s/
-                kubectl rollout status deployment/ticket-booking-app
-                """
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                    bat '''
+                    echo Setting up kubeconfig...
+                    if not exist "%USERPROFILE%\\.kube" mkdir "%USERPROFILE%\\.kube"
+                    copy /Y "%KUBECONFIG_FILE%" "%USERPROFILE%\\.kube\\config"
+                    '''
+
+                    bat """
+                    echo Deploying to Kubernetes...
+                    kubectl apply -f k8s\\deployment.yaml --namespace ${K8S_NAMESPACE}
+                    kubectl apply -f k8s\\service.yaml --namespace ${K8S_NAMESPACE} || echo Service skipped
+                    
+
+                    echo Updating image in deployment...
+                    kubectl set image deployment/ticket-booking-deployment ticket-booking-container=${DOCKER_IMAGE}:${DOCKER_TAG} --namespace ${K8S_NAMESPACE}
+                    kubectl rollout status deployment/ticket-booking-deployment --namespace ${K8S_NAMESPACE} --timeout=120s
+                    """
+                }
             }
         }
     }
 
     post {
-        always {
-            bat 'docker system prune -f'
-            cleanWs()
-        }
         success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed!'
-        }
-    }
-}
+            echo "✅ SUCCESS: Build ${env.BUILD_NUMBER} completed."
