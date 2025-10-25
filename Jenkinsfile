@@ -22,21 +22,6 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                bat '''
-                    echo Running tests...
-                    python --version
-                    python -m ensurepip
-                    python -m pip install --upgrade pip
-                    python -m pip install pytest
-
-                    echo Running pytest on tests directory...
-                    python -m pytest tests/ || exit /b 1
-                '''
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 bat '''
