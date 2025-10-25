@@ -34,15 +34,22 @@ pipeline {
 
         stage('Test Docker Image') {
             steps {
-                bat """
-                docker run -d --name test-app ${IMAGE_NAME}:${env.BUILD_ID}
-                timeout /t 20 >nul
-                curl -f http://localhost:5000 || exit /b 1
-                docker stop test-app
-                docker rm test-app
-                """
+                bat '''
+                    REM Remove any previous test container
+                    docker rm -f test-app || echo No existing container
+        
+                    REM Run container with port mapping
+                    docker run -d -p 5000:5000 --name test-app manikirangutthula2004/ticket-booking-app:7
+                    
+                    REM Wait for the container to start
+                    timeout /t 20
+            
+                    REM Test if the app is responding
+                    curl -f http://localhost:5000
+                    '''
+                }
             }
-        }
+
 
         stage('Push to Docker Hub') {
             steps {
