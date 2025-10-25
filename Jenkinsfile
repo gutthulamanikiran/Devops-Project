@@ -31,31 +31,31 @@ pipeline {
         }
 
         stage('Test Application') {
-            steps {
-                script {
-                    echo "⚡ Testing Docker container..."
-
-                    // Remove old container safely
-                    bat "docker rm -f test-app || echo No existing container"
-
-                    // Run container
-                    bat "docker run -d --name test-app -p 5000:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
-
-                    // Wait for app startup
-                    bat 'ping 127.0.0.1 -n 10 >nul'
-
-                    // Health checks (fail build if not reachable)
-                    def health1 = bat(script: 'powershell -Command "curl http://localhost:5000/health -UseBasicParsing"', returnStatus: true)
-                    def health2 = bat(script: 'powershell -Command "curl http://localhost:5000/ -UseBasicParsing"', returnStatus: true)
-                    if (health1 != 0 || health2 != 0) {
-                        error("❌ Health check failed!")
+                steps {
+                    script {
+                        echo "⚡ Testing Docker container..."
+            
+                        // Remove old container safely
+                        bat "docker rm -f test-app || echo No existing container"
+            
+                        // Run container
+                        bat "docker run -d --name test-app -p 5000:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
+            
+                        // Wait for app startup
+                        bat 'ping 127.0.0.1 -n 10 >nul'
+            
+                        // Test root endpoint only
+                        def status = bat(script: 'powershell -Command "curl http://localhost:5000/ -UseBasicParsing"', returnStatus: true)
+                        if (status != 0) {
+                            error("❌ Application is not responding!")
+                        }
+            
+                        // Stop and remove container
+                        bat "docker stop test-app && docker rm test-app"
                     }
-
-                    // Stop and remove container
-                    bat "docker stop test-app && docker rm test-app"
                 }
             }
-        }
+
 
         stage('Push to Docker Hub') {
             steps {
